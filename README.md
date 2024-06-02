@@ -5,8 +5,6 @@ The EOSSystem project implements the Epic Online Services (EOS) subsystem to fac
 This system can be applied to various projects beyond its current scope. Additionally, the project is supported by the creation of an organization on the Epic Games developer portal. Due to privacy reasons, the artifacts used in this project are not shared.
 
 
-Clases
-======
 # UEOSSystemGameInstance Class
 
 ## Description
