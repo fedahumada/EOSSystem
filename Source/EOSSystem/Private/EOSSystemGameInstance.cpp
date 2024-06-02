@@ -94,8 +94,8 @@ void UEOSSystemGameInstance::EOSCreateSession(bool bIsDedicatedServer, bool bIsL
 			SessionCreationInfo.bUseLobbiesIfAvailable = false;
 			SessionCreationInfo.bUsesPresence = false;
 			SessionCreationInfo.bShouldAdvertise = true;
-			//SessionCreationInfo.bAllowJoinViaPresence = false;
-			//SessionCreationInfo.bAllowJoinViaPresenceFriendsOnly = false;
+			SessionCreationInfo.bAllowJoinViaPresence = false;
+			SessionCreationInfo.bAllowJoinViaPresenceFriendsOnly = false;
 			SessionCreationInfo.Set(FName("SEARCH_KEYWORDS"), FString("RandomHi"), EOnlineDataAdvertisementType::ViaOnlineService);
 
 			Session->OnCreateSessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnCreateSessionCompleted);
@@ -126,9 +126,6 @@ void UEOSSystemGameInstance::OnFindSessionCompleted(bool bWasSuccess)
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Couldn't find servers online"));
-
-		//~ If doesn't find a session, user will create one
-		//EOSCreateSession(false,false,10);
 	}
 }
 
