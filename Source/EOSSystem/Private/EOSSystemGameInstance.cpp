@@ -90,7 +90,7 @@ void UEOSSystemGameInstance::EOSCreateSession(bool bIsDedicatedServer, bool bIsL
 			SessionCreationInfo.bIsDedicated = bIsDedicatedServer;
 			SessionCreationInfo.bIsLANMatch = bIsLanServer;
 			SessionCreationInfo.NumPublicConnections = NumberOfPublicConnections;
-			SessionCreationInfo.bAllowInvites = true;
+			SessionCreationInfo.bAllowInvites = false;
 			SessionCreationInfo.bUseLobbiesIfAvailable = false;
 			SessionCreationInfo.bUsesPresence = false;
 			SessionCreationInfo.bShouldAdvertise = true;
