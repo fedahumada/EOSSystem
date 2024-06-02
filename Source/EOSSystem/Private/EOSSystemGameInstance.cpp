@@ -94,8 +94,6 @@ void UEOSSystemGameInstance::EOSCreateSession(bool bIsDedicatedServer, bool bIsL
 			SessionCreationInfo.bUseLobbiesIfAvailable = false;
 			SessionCreationInfo.bUsesPresence = false;
 			SessionCreationInfo.bShouldAdvertise = true;
-			//SessionCreationInfo.bAllowJoinViaPresence = false;
-			//SessionCreationInfo.bAllowJoinViaPresenceFriendsOnly = false;
 			SessionCreationInfo.Set(FName("SEARCH_KEYWORDS"), FString("RandomHi"), EOnlineDataAdvertisementType::ViaOnlineService);
 
 			Session->OnCreateSessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnCreateSessionCompleted);
