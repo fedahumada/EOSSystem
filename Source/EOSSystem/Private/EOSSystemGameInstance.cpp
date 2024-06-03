@@ -7,15 +7,13 @@
 #include "OnlineSubsystem.h"
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "Kismet/GameplayStatics.h"
-
+#include "VoiceChat.h"
 
 void UEOSSystemGameInstance::LoginWithEOS(FString Id, FString Token, FString LoginType)
 {
 	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
-	if(Subsystem == nullptr) return;
-	
 	const IOnlineIdentityPtr Identity = Subsystem->GetIdentityInterface();
-	if(Identity == nullptr) return;
+	if(Subsystem == nullptr || Identity == nullptr) return;
 
 	FOnlineAccountCredentials AccountDetails;
 	AccountDetails.Id = Id;
@@ -29,10 +27,8 @@ void UEOSSystemGameInstance::LoginWithEOS(FString Id, FString Token, FString Log
 FString UEOSSystemGameInstance::GetPlayerUsername()
 {
 	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
-	if(Subsystem == nullptr) return FString();
-	
 	const IOnlineIdentityPtr Identity = Subsystem->GetIdentityInterface();
-	if(Identity == nullptr) return FString();
+	if(Subsystem == nullptr || Identity == nullptr) return FString();
 
 	if (Identity->GetLoginStatus(0) == ELoginStatus::LoggedIn)
 	{
@@ -45,10 +41,8 @@ FString UEOSSystemGameInstance::GetPlayerUsername()
 bool UEOSSystemGameInstance::IsPlayerLoggedIn()
 {
 	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
-	if(Subsystem == nullptr) return false;
-	
 	const IOnlineIdentityPtr Identity = Subsystem->GetIdentityInterface();
-	if(Identity == nullptr) return false;
+	if(Subsystem == nullptr || Identity == nullptr) return false;
 
 	if (Identity->GetLoginStatus(0) == ELoginStatus::LoggedIn)
 	{
@@ -82,92 +76,75 @@ void UEOSSystemGameInstance::OnCreateSessionCompleted(FName SessionName, bool bW
 
 void UEOSSystemGameInstance::EOSCreateSession(bool bIsDedicatedServer, bool bIsLanServer, int32 NumberOfPublicConnections)
 {
-	if(const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld()))
-	{
-		if (const IOnlineSessionPtr Session = Subsystem->GetSessionInterface())
-		{
-			FOnlineSessionSettings SessionCreationInfo;
-			SessionCreationInfo.bIsDedicated = bIsDedicatedServer;
-			SessionCreationInfo.bIsLANMatch = bIsLanServer;
-			SessionCreationInfo.NumPublicConnections = NumberOfPublicConnections;
-			SessionCreationInfo.bAllowInvites = true;
-			SessionCreationInfo.bUseLobbiesIfAvailable = false;
-			SessionCreationInfo.bUsesPresence = false;
-			SessionCreationInfo.bShouldAdvertise = true;
-			SessionCreationInfo.Set(FName("SEARCH_KEYWORDS"), FString("RandomHi"), EOnlineDataAdvertisementType::ViaOnlineService);
+	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+	const IOnlineSessionPtr Session = Subsystem->GetSessionInterface();
+	if (Subsystem == nullptr || Session == nullptr) return;
+	
+	FOnlineSessionSettings SessionCreationInfo;
+	SessionCreationInfo.bIsDedicated = bIsDedicatedServer;
+	SessionCreationInfo.bIsLANMatch = bIsLanServer;
+	SessionCreationInfo.NumPublicConnections = NumberOfPublicConnections;
+	SessionCreationInfo.bUsesPresence = false;
+	SessionCreationInfo.bAllowInvites = true;
+	SessionCreationInfo.bUseLobbiesIfAvailable = true;
+	SessionCreationInfo.bUseLobbiesVoiceChatIfAvailable = true;
+	SessionCreationInfo.bShouldAdvertise = true;
+	SessionCreationInfo.Set(FName("SEARCH_KEYWORDS"), FString("RandomHi"), EOnlineDataAdvertisementType::ViaOnlineService);
 
-			Session->OnCreateSessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnCreateSessionCompleted);
-			Session->CreateSession(0,FName("MainSession"),SessionCreationInfo);
-		}
-	}
+	Session->OnCreateSessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnCreateSessionCompleted);
+	Session->CreateSession(0,FName("MainSession"),SessionCreationInfo);
 }
 
 
 
 void UEOSSystemGameInstance::OnFindSessionCompleted(bool bWasSuccess)
 {
-	if (bWasSuccess)
+	if (!bWasSuccess)
 	{
-		if(const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld()))
-		{
-			if(const IOnlineSessionPtr Session = Subsystem->GetSessionInterface())
-			{
-				if(SessionSearch->SearchResults.Num() > 0)
-				{
-					Session->OnJoinSessionCompleteDelegates.AddUObject(this, &UEOSSystemGameInstance::OnJoinSessionCompleted);
-					Session->JoinSession(0,FName("MainSession"),SessionSearch->SearchResults[0]);
-					UE_LOG(LogTemp, Warning, TEXT("Joined Successful"));
-				}
-			}
-		}
+		UE_LOG(LogTemp, Warning, TEXT("Couldn't find servers online"));
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Couldn't find servers online"));
-
-		//~ If doesn't find a session, user will create one
-		//EOSCreateSession(false,false,10);
+		const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+		const IOnlineSessionPtr Session = Subsystem->GetSessionInterface();
+		if(Subsystem == nullptr || Session == nullptr || SessionSearch->SearchResults.Num() <= 0) return;
+		
+		Session->OnJoinSessionCompleteDelegates.AddUObject(this, &UEOSSystemGameInstance::OnJoinSessionCompleted);
+		Session->JoinSession(0,FName("MainSession"),SessionSearch->SearchResults[0]);
+		UE_LOG(LogTemp, Warning, TEXT("Joined Successful"));
 	}
 }
 
 void UEOSSystemGameInstance::OnJoinSessionCompleted(FName SessionName, EOnJoinSessionCompleteResult::Type Result) const
-
 {
-	if(Result == EOnJoinSessionCompleteResult::Success)
+	if(Result != EOnJoinSessionCompleteResult::Success) return;
+	
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(),0);
+	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+	const IOnlineSessionPtr Session = Subsystem->GetSessionInterface();
+	if (PlayerController == nullptr || Subsystem == nullptr || Session == nullptr) return;
+	
+	FString JoinAddress;
+	Session->GetResolvedConnectString(SessionName,JoinAddress);
+	UE_LOG(LogTemp, Warning, TEXT("Join address is %s"), *JoinAddress);
+	if(!JoinAddress.IsEmpty())
 	{
-		if(APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(),0))
-		{
-			if(const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld()))
-			{
-				if (const IOnlineSessionPtr Session = Subsystem->GetSessionInterface())
-				{
-					FString JoinAddress;
-					Session->GetResolvedConnectString(SessionName,JoinAddress);
-					UE_LOG(LogTemp, Warning, TEXT("Join address is %s"), *JoinAddress);
-					if(!JoinAddress.IsEmpty())
-					{
-						PlayerController->ClientTravel(JoinAddress,TRAVEL_Absolute);
-					}
-				}
-			}
-		}
+		PlayerController->ClientTravel(JoinAddress,TRAVEL_Absolute);
 	}
 }
 
 void UEOSSystemGameInstance::EOSFindSessionAndJoin()
 {
-	if(const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld()))
-	{
-		if (const IOnlineSessionPtr Session = Subsystem->GetSessionInterface())
-		{
-			SessionSearch = MakeShareable(new FOnlineSessionSearch());
-			SessionSearch->bIsLanQuery = false;
-			SessionSearch->MaxSearchResults = 100;
-			SessionSearch->QuerySettings.SearchParams.Empty();
-			Session->OnFindSessionsCompleteDelegates.AddUObject(this, &UEOSSystemGameInstance::OnFindSessionCompleted);
-			Session->FindSessions(0, SessionSearch.ToSharedRef());
-		}
-	}
+	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+	const IOnlineSessionPtr Session = Subsystem->GetSessionInterface();
+	if (Subsystem == nullptr || Session == nullptr) return;
+
+	SessionSearch = MakeShareable(new FOnlineSessionSearch());
+	SessionSearch->bIsLanQuery = false;
+	SessionSearch->MaxSearchResults = 100;
+	SessionSearch->QuerySettings.SearchParams.Empty();
+	Session->OnFindSessionsCompleteDelegates.AddUObject(this, &UEOSSystemGameInstance::OnFindSessionCompleted);
+	Session->FindSessions(0, SessionSearch.ToSharedRef());
 }
 
 
@@ -186,12 +163,78 @@ void UEOSSystemGameInstance::OnDestroySessionCompleted(FName SessionName, bool b
 
 void UEOSSystemGameInstance::EOSDestroySession()
 {
-	if(const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld()))
+	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+	const IOnlineSessionPtr Session = Subsystem->GetSessionInterface();
+	if (Subsystem == nullptr || Session == nullptr) return;
+
+	Session->OnDestroySessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnDestroySessionCompleted);
+	Session->DestroySession(FName("MainSession"));
+}
+
+
+
+void UEOSSystemGameInstance::OnVoiceLoginCompleted(const FString& PlayerName, const FVoiceChatResult& Result)
+{
+	if (Result.IsSuccess())
 	{
-		if (const IOnlineSessionPtr Session = Subsystem->GetSessionInterface())
-		{
-			Session->OnDestroySessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnDestroySessionCompleted);
-			Session->DestroySession(FName("MainSession"));
-		}
+		UE_LOG(LogTemp, Warning, TEXT("Success creating voicechat"));
 	}
+}
+
+void UEOSSystemGameInstance::EOSVoiceChatLogin()
+{
+	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+	const IOnlineIdentityPtr Identity = Subsystem->GetIdentityInterface();
+	IVoiceChat* VoiceChat = IVoiceChat::Get();
+	IVoiceChatUser* VoiceChatUser = VoiceChat->CreateUser();
+	if(Subsystem == nullptr || Identity == nullptr || !IsPlayerLoggedIn() || VoiceChat == nullptr || VoiceChatUser == nullptr) return;
+
+	const TSharedPtr<const FUniqueNetId> UserId = Identity->GetUniquePlayerId(0);
+	const FPlatformUserId PlatformUserId = Identity->GetPlatformUserIdFromUniqueNetId(*UserId);
+	VoiceChatUser->Login(
+		PlatformUserId,
+		UserId->ToString(),
+		TEXT(""),
+		FOnVoiceChatLoginCompleteDelegate::CreateUObject(this, &UEOSSystemGameInstance::OnVoiceLoginCompleted)
+	);
+}
+
+void UEOSSystemGameInstance::EOSSetInputVolume(float NewVolume)
+{
+	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+	const IOnlineIdentityPtr Identity = Subsystem->GetIdentityInterface();
+	IVoiceChat* VoiceChat = IVoiceChat::Get();
+	IVoiceChatUser* VoiceChatUser = VoiceChat->CreateUser();
+	if(Subsystem == nullptr || Identity == nullptr || !IsPlayerLoggedIn() || VoiceChat == nullptr || VoiceChatUser == nullptr) return;
+	
+	const TSharedPtr<const FUniqueNetId> UserId = Identity->GetUniquePlayerId(0);
+	VoiceChatUser->SetPlayerVolume(UserId->ToString(), NewVolume);
+	
+}
+
+void UEOSSystemGameInstance::EOSMuteMic(bool bIsMuted)
+{
+	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+	const IOnlineIdentityPtr Identity = Subsystem->GetIdentityInterface();
+	IVoiceChat* VoiceChat = IVoiceChat::Get();
+	IVoiceChatUser* VoiceChatUser = VoiceChat->CreateUser();
+	if(Subsystem == nullptr || Identity == nullptr || !IsPlayerLoggedIn() || VoiceChat == nullptr || VoiceChatUser == nullptr) return;
+
+	const TSharedPtr<const FUniqueNetId> UserId = Identity->GetUniquePlayerId(0);
+	VoiceChatUser->SetPlayerMuted(UserId->ToString(), bIsMuted);
+	
+}
+
+void UEOSSystemGameInstance::SetInputOutputMode(int32 Value)
+{
+	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+	const IOnlineIdentityPtr Identity = Subsystem->GetIdentityInterface();
+	IVoiceChat* VoiceChat = IVoiceChat::Get();
+	IVoiceChatUser* VoiceChatUser = VoiceChat->CreateUser();
+	if(Subsystem == nullptr || Identity == nullptr || !IsPlayerLoggedIn() || VoiceChat == nullptr || VoiceChatUser == nullptr) return;
+
+	UE_LOG(LogTemp, Warning, TEXT("Using microphone - %s"),*VoiceChatUser->GetAvailableInputDeviceInfos()[Value].DisplayName);
+	UE_LOG(LogTemp, Warning, TEXT("Using microphone - %s"), *VoiceChatUser->GetAvailableOutputDeviceInfos()[Value].DisplayName);
+	VoiceChatUser->SetInputDeviceId(VoiceChatUser->GetAvailableInputDeviceInfos()[Value].DisplayName);
+	VoiceChatUser->SetOutputDeviceId(VoiceChatUser->GetAvailableOutputDeviceInfos()[Value].DisplayName);
 }

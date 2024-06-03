@@ -6,6 +6,7 @@
 #include "Engine/GameInstance.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "EOSSystemGameInstance.generated.h"
+struct FVoiceChatResult;
 
 /**
  * 
@@ -30,7 +31,6 @@ public:
 	void LoginWithEOS_Response(int32 LocalUserNum, bool bWasSuccess, const FUniqueNetId& UserId, const FString& Error) const;
 	
 
-
 	//~ CREATE SESSION
 	void OnCreateSessionCompleted(FName SessionName, bool bWasSuccess) const;
 	UFUNCTION(BlueprintCallable,Category="EOS Functions")
@@ -53,5 +53,20 @@ public:
 	void OnDestroySessionCompleted(FName SessionName, bool bWasSuccess) const;
 	UFUNCTION(BlueprintCallable,Category="EOS Functions")
 	void EOSDestroySession();
+
+
+	//~ VOICECHAT
+	void OnVoiceLoginCompleted(const FString& PlayerName, const FVoiceChatResult& Result);
+	UFUNCTION(BlueprintCallable, Category="EOS Functions")
+	void EOSVoiceChatLogin();
+	
+	UFUNCTION(BlueprintCallable, Category="EOS Functions")
+	void EOSSetInputVolume(float NewVolume);
+
+	UFUNCTION(BlueprintCallable, Category="EOS Functions")
+	void EOSMuteMic(bool bIsMuted);
+
+	UFUNCTION(BlueprintCallable, Category="EOS Functions")
+	void SetInputOutputMode(int32 Value);
 	
 };
