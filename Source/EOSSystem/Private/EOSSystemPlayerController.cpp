@@ -119,10 +119,9 @@ void AEOSSystemPlayerController::OnTouchReleased()
 
 void AEOSSystemPlayerController::OnNetCleanup(UNetConnection* Connection)
 {
-	if(UEOSSystemGameInstance* GameInstance = Cast<UEOSSystemGameInstance>(GetWorld()->GetGameInstance()))
+	if (UEOSSystemGameInstance* GameInstance = Cast<UEOSSystemGameInstance>(GetWorld()->GetGameInstance()))
 	{
 		GameInstance->EOSDestroySession();
 	}
-	Super::OnNetCleanup(Connection);
 	Super::OnNetCleanup(Connection);
 }

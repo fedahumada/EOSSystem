@@ -12,10 +12,8 @@
 void UEOSSystemGameInstance::LoginWithEOS(FString Id, FString Token, FString LoginType)
 {
 	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
-	if(Subsystem == nullptr) return;
-	
 	const IOnlineIdentityPtr Identity = Subsystem->GetIdentityInterface();
-	if(Identity == nullptr) return;
+	if(Subsystem == nullptr || Identity == nullptr) return;
 
 	FOnlineAccountCredentials AccountDetails;
 	AccountDetails.Id = Id;
@@ -29,10 +27,8 @@ void UEOSSystemGameInstance::LoginWithEOS(FString Id, FString Token, FString Log
 FString UEOSSystemGameInstance::GetPlayerUsername()
 {
 	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
-	if(Subsystem == nullptr) return FString();
-	
 	const IOnlineIdentityPtr Identity = Subsystem->GetIdentityInterface();
-	if(Identity == nullptr) return FString();
+	if(Subsystem == nullptr || Identity == nullptr) return FString();
 
 	if (Identity->GetLoginStatus(0) == ELoginStatus::LoggedIn)
 	{
@@ -45,10 +41,8 @@ FString UEOSSystemGameInstance::GetPlayerUsername()
 bool UEOSSystemGameInstance::IsPlayerLoggedIn()
 {
 	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
-	if(Subsystem == nullptr) return false;
-	
 	const IOnlineIdentityPtr Identity = Subsystem->GetIdentityInterface();
-	if(Identity == nullptr) return false;
+	if(Subsystem == nullptr || Identity == nullptr) return false;
 
 	if (Identity->GetLoginStatus(0) == ELoginStatus::LoggedIn)
 	{
@@ -80,27 +74,46 @@ void UEOSSystemGameInstance::OnCreateSessionCompleted(FName SessionName, bool bW
 	}
 }
 
-void UEOSSystemGameInstance::EOSCreateSession(bool bIsDedicatedServer, bool bIsLanServer, int32 NumberOfPublicConnections)
+void UEOSSystemGameInstance::EOSCreateSession(int32 NumberOfPublicConnections)
 {
-	if(const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld()))
+	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+	const IOnlineSessionPtr Session = Subsystem->GetSessionInterface();
+	if (Subsystem == nullptr || Session == nullptr) return;
+	
+	FOnlineSessionSettings SessionCreationInfo;
+	if (IsRunningDedicatedServer()) 
 	{
-		if (const IOnlineSessionPtr Session = Subsystem->GetSessionInterface())
-		{
-			FOnlineSessionSettings SessionCreationInfo;
-			SessionCreationInfo.bIsDedicated = bIsDedicatedServer;
-			SessionCreationInfo.bIsLANMatch = bIsLanServer;
-			SessionCreationInfo.NumPublicConnections = NumberOfPublicConnections;
-			SessionCreationInfo.bAllowInvites = true;
-			SessionCreationInfo.bUseLobbiesIfAvailable = false;
-			SessionCreationInfo.bUsesPresence = false;
-			SessionCreationInfo.bShouldAdvertise = true;
-			//SessionCreationInfo.bAllowJoinViaPresence = false;
-			//SessionCreationInfo.bAllowJoinViaPresenceFriendsOnly = false;
-			SessionCreationInfo.Set(FName("SEARCH_KEYWORDS"), FString("RandomHi"), EOnlineDataAdvertisementType::ViaOnlineService);
+		UE_LOG(LogTemp, Warning, TEXT("CREATING ON DEDICATED SERVER"));
+		SessionCreationInfo.bIsDedicated = true;
+		SessionCreationInfo.bIsLANMatch = false;
+		SessionCreationInfo.NumPublicConnections = NumberOfPublicConnections;
+		SessionCreationInfo.bAllowInvites = false;
+		SessionCreationInfo.bUseLobbiesIfAvailable = false;
+		SessionCreationInfo.bAllowJoinViaPresence = false;
+		SessionCreationInfo.bUsesPresence = false;
+		SessionCreationInfo.bAllowJoinViaPresenceFriendsOnly = false;
+		SessionCreationInfo.bShouldAdvertise = true;
 
-			Session->OnCreateSessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnCreateSessionCompleted);
-			Session->CreateSession(0,FName("MainSession"),SessionCreationInfo);
-		}
+		SessionCreationInfo.Set(FName("SEARCH_KEYWORDS"), FString("DS"), EOnlineDataAdvertisementType::ViaOnlineService);
+
+		Session->OnCreateSessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnCreateSessionCompleted);
+		Session->CreateSession(0,FName("DsSession"),SessionCreationInfo);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("CREATING ON P2P"));
+		SessionCreationInfo.bIsDedicated = false;
+		SessionCreationInfo.bIsLANMatch = false;
+		SessionCreationInfo.NumPublicConnections = NumberOfPublicConnections;
+		SessionCreationInfo.bAllowInvites = false;
+		SessionCreationInfo.bUseLobbiesIfAvailable = false;
+		SessionCreationInfo.bUsesPresence = false;
+		SessionCreationInfo.bShouldAdvertise = true;
+
+		SessionCreationInfo.Set(FName("SEARCH_KEYWORDS"), FString("P2P"), EOnlineDataAdvertisementType::ViaOnlineService);
+		
+		Session->OnCreateSessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnCreateSessionCompleted);
+		Session->CreateSession(0,FName("P2PSession"),SessionCreationInfo);
 	}
 }
 
@@ -108,68 +121,53 @@ void UEOSSystemGameInstance::EOSCreateSession(bool bIsDedicatedServer, bool bIsL
 
 void UEOSSystemGameInstance::OnFindSessionCompleted(bool bWasSuccess)
 {
-	if (bWasSuccess)
+	if (!bWasSuccess)
 	{
-		if(const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld()))
-		{
-			if(const IOnlineSessionPtr Session = Subsystem->GetSessionInterface())
-			{
-				if(SessionSearch->SearchResults.Num() > 0)
-				{
-					Session->OnJoinSessionCompleteDelegates.AddUObject(this, &UEOSSystemGameInstance::OnJoinSessionCompleted);
-					Session->JoinSession(0,FName("MainSession"),SessionSearch->SearchResults[0]);
-					UE_LOG(LogTemp, Warning, TEXT("Joined Successful"));
-				}
-			}
-		}
+		UE_LOG(LogTemp, Warning, TEXT("Couldn't find servers online"));
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Couldn't find servers online"));
-
-		//~ If doesn't find a session, user will create one
-		//EOSCreateSession(false,false,10);
+		const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+		const IOnlineSessionPtr Session = Subsystem->GetSessionInterface();
+		if(Subsystem == nullptr || Session == nullptr || SessionSearch->SearchResults.Num() <= 0) return;
+		
+		Session->OnJoinSessionCompleteDelegates.AddUObject(this, &UEOSSystemGameInstance::OnJoinSessionCompleted);
+		Session->JoinSession(0, bIsDedicatedSearch ? FName("DsSession") : FName("P2PSession"),SessionSearch->SearchResults[0]);
+		UE_LOG(LogTemp, Warning, TEXT("Joined Successful"));
 	}
 }
 
 void UEOSSystemGameInstance::OnJoinSessionCompleted(FName SessionName, EOnJoinSessionCompleteResult::Type Result) const
-
 {
-	if(Result == EOnJoinSessionCompleteResult::Success)
+	if(Result != EOnJoinSessionCompleteResult::Success) return;
+	
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(),0);
+	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+	const IOnlineSessionPtr Session = Subsystem->GetSessionInterface();
+	if (PlayerController == nullptr || Subsystem == nullptr || Session == nullptr) return;
+	
+	FString JoinAddress;
+	Session->GetResolvedConnectString(bIsDedicatedSearch ? FName("DsSession") : FName("P2PSession"), JoinAddress);
+	UE_LOG(LogTemp, Warning, TEXT("Join address is %s"), *JoinAddress);
+	if(!JoinAddress.IsEmpty())
 	{
-		if(APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(),0))
-		{
-			if(const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld()))
-			{
-				if (const IOnlineSessionPtr Session = Subsystem->GetSessionInterface())
-				{
-					FString JoinAddress;
-					Session->GetResolvedConnectString(SessionName,JoinAddress);
-					UE_LOG(LogTemp, Warning, TEXT("Join address is %s"), *JoinAddress);
-					if(!JoinAddress.IsEmpty())
-					{
-						PlayerController->ClientTravel(JoinAddress,TRAVEL_Absolute);
-					}
-				}
-			}
-		}
+		PlayerController->ClientTravel(JoinAddress,TRAVEL_Absolute);
 	}
 }
 
-void UEOSSystemGameInstance::EOSFindSessionAndJoin()
+void UEOSSystemGameInstance::EOSFindSessionAndJoin(bool bIsDedicatedSearchIn)
 {
-	if(const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld()))
-	{
-		if (const IOnlineSessionPtr Session = Subsystem->GetSessionInterface())
-		{
-			SessionSearch = MakeShareable(new FOnlineSessionSearch());
-			SessionSearch->bIsLanQuery = false;
-			SessionSearch->MaxSearchResults = 100;
-			SessionSearch->QuerySettings.SearchParams.Empty();
-			Session->OnFindSessionsCompleteDelegates.AddUObject(this, &UEOSSystemGameInstance::OnFindSessionCompleted);
-			Session->FindSessions(0, SessionSearch.ToSharedRef());
-		}
-	}
+	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+	const IOnlineSessionPtr Session = Subsystem->GetSessionInterface();
+	if (Subsystem == nullptr || Session == nullptr) return;
+
+	bIsDedicatedSearch = bIsDedicatedSearchIn;
+	SessionSearch = MakeShareable(new FOnlineSessionSearch());
+	SessionSearch->bIsLanQuery = false;
+	SessionSearch->MaxSearchResults = 100;
+	SessionSearch->QuerySettings.SearchParams.Empty();
+	Session->OnFindSessionsCompleteDelegates.AddUObject(this, &UEOSSystemGameInstance::OnFindSessionCompleted);
+	Session->FindSessions(0, SessionSearch.ToSharedRef());
 }
 
 
@@ -188,12 +186,10 @@ void UEOSSystemGameInstance::OnDestroySessionCompleted(FName SessionName, bool b
 
 void UEOSSystemGameInstance::EOSDestroySession()
 {
-	if(const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld()))
-	{
-		if (const IOnlineSessionPtr Session = Subsystem->GetSessionInterface())
-		{
-			Session->OnDestroySessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnDestroySessionCompleted);
-			Session->DestroySession(FName("MainSession"));
-		}
-	}
+	const IOnlineSubsystem* Subsystem = Online::GetSubsystem(this->GetWorld());
+	const IOnlineSessionPtr Session = Subsystem->GetSessionInterface();
+	if (Subsystem == nullptr || Session == nullptr) return;
+
+	Session->OnDestroySessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnDestroySessionCompleted);
+	Session->DestroySession(bIsDedicatedSearch ? FName("DsSession") : FName("P2PSession"));
 }

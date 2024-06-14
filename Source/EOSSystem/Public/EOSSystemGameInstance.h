@@ -34,7 +34,7 @@ public:
 	//~ CREATE SESSION
 	void OnCreateSessionCompleted(FName SessionName, bool bWasSuccess) const;
 	UFUNCTION(BlueprintCallable,Category="EOS Functions")
-	void EOSCreateSession(bool bIsDedicatedServer, bool bIsLanServer, int32 NumberOfPublicConnections);
+	void EOSCreateSession(int32 NumberOfPublicConnections);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="EOS Variables")
 	FString OpenLevelText;
@@ -44,8 +44,9 @@ public:
 	void OnFindSessionCompleted(bool bWasSuccess);
 	void OnJoinSessionCompleted(FName SessionName, EOnJoinSessionCompleteResult::Type Result) const;
 	UFUNCTION(BlueprintCallable,Category="EOS Functions")
-	void EOSFindSessionAndJoin();
+	void EOSFindSessionAndJoin(bool bIsDedicatedSearchIn);
 
+	bool bIsDedicatedSearch = false;
 	TSharedPtr<FOnlineSessionSearch> SessionSearch;
 	
 
