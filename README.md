@@ -1,4 +1,4 @@
-# EOSSystem Project Overview
+# EOSSystem Project
 
 The EOSSystem project integrates the Epic Online Services (EOS) subsystem to enhance connectivity via a login registration system requiring an Epic Games account. Its main goal is to enable robust multiplayer sessions, providing the essential infrastructure for creating lobbies and servers, including both listen servers (Peer to Peer) and dedicated servers.
 
