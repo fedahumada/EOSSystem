@@ -1,0 +1,51 @@
+{
+	"FileVersion": 3,
+	"Version": 0,
+	"VersionName": "1.145.240524",
+	"FriendlyName": "PlayFab Marketplace Plugin",
+	"Description": "PlayFab Marketplace plugin for Unreal Engine 5.2 Current API version: 1.145.240524",
+	"Category": "PlayFab",
+	"CreatedBy": "PlayFab and Phoenix Labs",
+	"CreatedByURL": "https://playfab.com/",
+	"DocsURL": "https://learn.microsoft.com/en-us/gaming/playfab/sdks/unreal/quickstart",
+	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/217fdf581b784571af03d3fb6580368f",
+	"SupportURL": "https://community.playfab.com/index.html",
+	"EngineVersion": "5.2.0",
+	"CanContainContent": false,
+	"Installed": true,
+	"Modules": [
+		{
+			"Name": "PlayFabCpp",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"PlatformAllowList": [
+				"Win64",
+				"Mac",
+				"IOS",
+				"Android"
+			]
+		},
+		{
+			"Name": "PlayFab",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"PlatformAllowList": [
+				"Win64",
+				"Mac",
+				"IOS",
+				"Android"
+			]
+		},
+		{
+			"Name": "PlayFabCommon",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"PlatformAllowList": [
+				"Win64",
+				"Mac",
+				"IOS",
+				"Android"
+			]
+		}
+	]
+}
