@@ -1,1 +1,0 @@
-EOSSystem.exe -server -log -AUTH_TYPE=deviceid -AUTH_LOGIN=test -AUTH_TOKEN=test -EOSConfig=ServerConfig
