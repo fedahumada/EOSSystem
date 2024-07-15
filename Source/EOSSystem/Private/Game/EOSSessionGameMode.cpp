@@ -8,6 +8,5 @@
 
 void AEOSSessionGameMode::PostLogin(APlayerController* NewPlayer)
 {
-	if(IsRunningDedicatedServer()) return;
 	Super::PostLogin(NewPlayer);
 }

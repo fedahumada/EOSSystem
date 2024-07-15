@@ -80,41 +80,22 @@ void UEOSSystemGameInstance::EOSCreateSession(int32 NumberOfPublicConnections, i
 	if (Subsystem == nullptr || Session == nullptr) return;
 	
 	FOnlineSessionSettings SessionCreationInfo;
-	if (IsRunningDedicatedServer()) 
-	{
-		UE_LOG(LogTemp, Warning, TEXT("CREATING ON DEDICATED SERVER"));
-		SessionCreationInfo.NumPublicConnections = NumberOfPublicConnections;
-		SessionCreationInfo.bIsLANMatch = false;
-		SessionCreationInfo.bAllowInvites = false;
-		SessionCreationInfo.bUseLobbiesIfAvailable = false;
-		SessionCreationInfo.bAllowJoinViaPresence = false;
-		SessionCreationInfo.bUsesPresence = false;
-		SessionCreationInfo.bAllowJoinViaPresenceFriendsOnly = false;
-		SessionCreationInfo.bShouldAdvertise = true;
-		SessionCreationInfo.bIsDedicated = true;
+	UE_LOG(LogTemp, Warning, TEXT("CREATING ON DEDICATED SERVER"));
+	SessionCreationInfo.NumPublicConnections = NumberOfPublicConnections;
+	SessionCreationInfo.bIsLANMatch = false;
+	SessionCreationInfo.bAllowInvites = false;
+	SessionCreationInfo.bUseLobbiesIfAvailable = false;
+	SessionCreationInfo.bAllowJoinViaPresence = false;
+	SessionCreationInfo.bUsesPresence = false;
+	SessionCreationInfo.bAllowJoinViaPresenceFriendsOnly = false;
+	SessionCreationInfo.bShouldAdvertise = true;
+	SessionCreationInfo.bIsDedicated = true;
 
-		SessionCreationInfo.Settings.Add(TEXT("PortInfo"), FOnlineSessionSetting(ServerPort, EOnlineDataAdvertisementType::ViaOnlineService));
-		SessionCreationInfo.Set(FName("SEARCH_KEYWORDS"), FString("DS"), EOnlineDataAdvertisementType::ViaOnlineService);
+	SessionCreationInfo.Settings.Add(TEXT("PortInfo"), FOnlineSessionSetting(ServerPort, EOnlineDataAdvertisementType::ViaOnlineService));
+	SessionCreationInfo.Set(FName("SEARCH_KEYWORDS"), FString("DS"), EOnlineDataAdvertisementType::ViaOnlineService);
 
-		Session->OnCreateSessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnCreateSessionCompleted);
-		Session->CreateSession(0,FName("DsSession"),SessionCreationInfo);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("CREATING ON P2P"));
-		SessionCreationInfo.NumPublicConnections = NumberOfPublicConnections;
-		SessionCreationInfo.bIsLANMatch = false;
-		SessionCreationInfo.bAllowInvites = false;
-		SessionCreationInfo.bUseLobbiesIfAvailable = false;
-		SessionCreationInfo.bUsesPresence = false;
-		SessionCreationInfo.bShouldAdvertise = true;
-		SessionCreationInfo.bIsDedicated = false;
-
-		SessionCreationInfo.Set(FName("SEARCH_KEYWORDS"), FString("P2P"), EOnlineDataAdvertisementType::ViaOnlineService);
-		
-		Session->OnCreateSessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnCreateSessionCompleted);
-		Session->CreateSession(0,FName("P2PSession"),SessionCreationInfo);
-	}
+	Session->OnCreateSessionCompleteDelegates.AddUObject(this,&UEOSSystemGameInstance::OnCreateSessionCompleted);
+	Session->CreateSession(0,FName("DsSession"),SessionCreationInfo);
 }
 
 
@@ -124,7 +105,6 @@ void UEOSSystemGameInstance::OnFindSessionCompleted(bool bWasSuccess)
 	if (!bWasSuccess)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Failed finding dedicated servers."));
-		
 	}
 	else
 	{
@@ -145,7 +125,6 @@ void UEOSSystemGameInstance::OnFindSessionCompleted(bool bWasSuccess)
 			UE_LOG(LogTemp, Warning, TEXT("Couldn't find dedicated servers online."));
 			PlayFabServerRequired.Broadcast();
 		}
-		
 	}
 }
 
